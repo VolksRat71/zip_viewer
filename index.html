@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZIP Product Finder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="description" content="ZIP Product Finder with dark/light mode toggle and robust image fallbacks." />
+  <style>
+    .fade-in { animation: fade 0.5s ease-in-out; }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+    body { transition: background-color 0.3s, color 0.3s; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4">
+  <main class="w-full max-w-xl">
+    <header class="text-center mb-6 flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight text-indigo-400">ZIP Product Finder</h1>
+        <p class="text-sm text-gray-400">Dark/Light mode • Static • GH Pages friendly</p>
+      </div>
+      <button id="themeToggle" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-3 py-1 text-sm transition">☀️</button>
+    </header>
+
+    <section id="card" class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+      <div id="image-wrap" class="w-full h-48 bg-gradient-to-br from-indigo-700 to-indigo-500 flex items-center justify-center">
+        <div id="image-fallback" class="text-white/90 text-lg font-medium">Loading image…</div>
+      </div>
+      <div class="p-6 space-y-2">
+        <div id="result" class="text-lg">Loading…</div>
+        <div id="meta" class="text-xs text-gray-400"></div>
+      </div>
+    </section>
+
+    <footer class="text-center mt-6 text-xs text-gray-500">
+      Tip: try <span class="font-mono">?zip=90210</span>
+    </footer>
+  </main>
+
+  <script>
+    // ------- Theme helper -------
+    const toggleBtn = document.getElementById('themeToggle');
+
+    function applyTheme(isDark) {
+      const body = document.body;
+      const card = document.getElementById('card');
+      const header = document.querySelector('header');
+
+      if (isDark) {
+        body.style.backgroundColor = '#111827';
+        body.style.color = '#f9fafb';
+        card.classList.remove('bg-white', 'text-gray-800');
+        card.classList.add('bg-gray-800', 'text-gray-100');
+        header.querySelector('h1').classList.add('text-indigo-400');
+        toggleBtn.textContent = '☀️';
+      } else {
+        body.style.backgroundColor = '#f9fafb';
+        body.style.color = '#1f2937';
+        card.classList.remove('bg-gray-800', 'text-gray-100');
+        card.classList.add('bg-white', 'text-gray-800');
+        header.querySelector('h1').classList.remove('text-indigo-400');
+        header.querySelector('h1').classList.add('text-indigo-600');
+        toggleBtn.textContent = '🌙';
+      }
+
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem('theme');
+      applyTheme(!saved || saved === 'dark'); // Default dark
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      const isDark = localStorage.getItem('theme') !== 'dark';
+      applyTheme(isDark);
+    });
+
+    initTheme();
+
+    // ------- Utility helpers -------
+    const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    function getZipParam() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('zip');
+    }
+
+    async function fetchCSV(path) {
+      const res = await fetch(path + '?v=' + Date.now());
+      if (!res.ok) throw new Error('CSV fetch failed');
+      const text = await res.text();
+      const rows = text.trim().split('\n');
+      const header = rows.shift().split(',');
+      return rows.map(line => {
+        const cols = line.split(',');
+        const o = {}; header.forEach((h, i) => o[h.trim()] = (cols[i] || '').trim());
+        return o;
+      });
+    }
+
+    function loadImage(url, timeoutMs = 5000) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const timer = setTimeout(() => { img.src = ''; reject(new Error('timeout')); }, timeoutMs);
+        img.onload = () => { clearTimeout(timer); resolve(url); };
+        img.onerror = () => { clearTimeout(timer); reject(new Error('error')); };
+        img.referrerPolicy = 'no-referrer';
+        img.src = url;
+      });
+    }
+
+    async function tryLocal(city, stateAbbr) {
+      const url = `images/${stateAbbr}/${slugify(city)}.jpg`;
+      return loadImage(url);
+    }
+
+    async function tryWikimedia(city, state) {
+      const title = encodeURIComponent(`${city}, ${state}`);
+      const api = `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&piprop=original&titles=${title}&origin=*`;
+      const r = await fetch(api);
+      if (!r.ok) throw new Error('wikimedia fetch failed');
+      const j = await r.json();
+      const pages = j?.query?.pages || {};
+      const first = Object.values(pages)[0];
+      const url = first?.original?.source;
+      if (!url) throw new Error('no wikimedia image');
+      return loadImage(url);
+    }
+
+    async function tryPicsum(city, state) {
+      const url = `https://picsum.photos/seed/${encodeURIComponent(slugify(city + '-' + state))}/800/400`;
+      return loadImage(url);
+    }
+
+    function inlineSVG(city, stateAbbr) {
+      const label = `${city}, ${stateAbbr}`;
+      const svg = encodeURIComponent(`
+        <svg xmlns='http://www.w3.org/2000/svg' width='800' height='400'>
+          <defs>
+            <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+              <stop offset='0%' stop-color='#6366f1'/>
+              <stop offset='100%' stop-color='#a855f7'/>
+            </linearGradient>
+          </defs>
+          <rect width='100%' height='100%' fill='url(#g)'/>
+          <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, sans-serif' font-size='36' fill='white' opacity='0.9'>${label}</text>
+        </svg>`);
+      return `data:image/svg+xml;charset=utf-8,${svg}`;
+    }
+
+    async function resolveImage(city, state, stateAbbr) {
+      const sources = [() => tryLocal(city, stateAbbr), () => tryWikimedia(city, state), () => tryPicsum(city, state)];
+      for (const s of sources) {
+        try { return await s(); } catch (e) {}
+      }
+      return inlineSVG(city, stateAbbr);
+    }
+
+    async function main() {
+      const resultDiv = document.getElementById('result');
+      const metaDiv = document.getElementById('meta');
+      const imageWrap = document.getElementById('image-wrap');
+      const fallbackText = document.getElementById('image-fallback');
+
+      const zip = getZipParam();
+      if (!zip) {
+        resultDiv.innerHTML = `Please provide a ZIP code in the URL.<br><span class="font-mono text-indigo-400">?zip=90210</span>`;
+        metaDiv.textContent = '';
+        fallbackText.textContent = 'No ZIP provided';
+        return;
+      }
+
+      let data;
+      try {
+        data = await fetchCSV('data.csv');
+      } catch (e) {
+        resultDiv.textContent = 'Could not load data.csv';
+        metaDiv.textContent = e.message || String(e);
+        return;
+      }
+
+      const match = data.find(r => r.zipcode === zip);
+      if (!match) {
+        resultDiv.innerHTML = `No results found for ZIP <span class="font-mono">${zip}</span>.`;
+        metaDiv.textContent = '';
+        fallbackText.textContent = 'No match';
+        return;
+      }
+
+      const { county, city, state, state_abbr, state_fips } = match;
+      resultDiv.innerHTML = `
+        <div class="space-y-1">
+          <h2 class="text-2xl font-semibold text-indigo-400">Products found for ${county} County,</h2>
+          <p class="text-lg">in ${city} ${state_abbr}!</p>
+        </div>`;
+      metaDiv.textContent = `ZIP: ${zip} • State: ${state} (FIPS ${state_fips})`;
+
+      try {
+        const url = await resolveImage(city, state, state_abbr);
+        const img = new Image();
+        img.src = url;
+        img.alt = `${city}, ${state_abbr}`;
+        img.className = 'w-full h-48 object-cover fade-in';
+        imageWrap.innerHTML = '';
+        imageWrap.appendChild(img);
+      } catch {
+        imageWrap.innerHTML = `<div class='w-full h-48 bg-gradient-to-br from-indigo-700 to-indigo-500 flex items-center justify-center text-white/90'>Image unavailable</div>`;
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
