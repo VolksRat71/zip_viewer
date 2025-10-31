@@ -171,6 +171,31 @@
         return;
       }
 
+      // Handle DEFAULT case (nationwide products)
+      if (zip === 'DEFAULT') {
+        resultDiv.innerHTML = `
+          <div class="space-y-1">
+            <h2 class="text-2xl font-semibold text-indigo-400">You are viewing default products</h2>
+            <p class="text-lg">Nationwide availability</p>
+          </div>`;
+        metaDiv.textContent = 'ZIP: DEFAULT • Nationwide coverage';
+
+        // Load USA flag/map image
+        const nationalImageUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Map_of_USA_with_state_names_2.svg/1200px-Map_of_USA_with_state_names_2.svg.png';
+        try {
+          const url = await loadImage(nationalImageUrl);
+          const img = new Image();
+          img.src = url;
+          img.alt = 'United States Map';
+          img.className = 'w-full h-48 object-cover fade-in';
+          imageWrap.innerHTML = '';
+          imageWrap.appendChild(img);
+        } catch {
+          imageWrap.innerHTML = `<div class='w-full h-48 bg-gradient-to-br from-indigo-700 to-indigo-500 flex items-center justify-center text-white/90 text-xl'>🇺🇸 USA</div>`;
+        }
+        return;
+      }
+
       let data;
       try {
         data = await fetchCSV('data.csv');
