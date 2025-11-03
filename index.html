@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZIP Product Finder</title>
+  <title>ZIP Delivery Locator</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <meta name="description" content="ZIP Product Finder with dark/light mode toggle and robust image fallbacks." />
+  <meta name="description" content="ZIP Code Delivery Location Finder with physical address information and dark/light mode toggle." />
   <style>
     .fade-in { animation: fade 0.5s ease-in-out; }
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
@@ -16,8 +16,8 @@
   <main class="w-full max-w-xl">
     <header class="text-center mb-6 flex justify-between items-center">
       <div>
-        <h1 class="text-3xl font-bold tracking-tight text-indigo-400">ZIP Product Finder</h1>
-        <p class="text-sm text-gray-400">Dark/Light mode • Static • GH Pages friendly</p>
+        <h1 class="text-3xl font-bold tracking-tight text-indigo-400">ZIP Delivery Locator</h1>
+        <p class="text-sm text-gray-400">Physical address lookup • Geo-targeted redirects</p>
       </div>
       <button id="themeToggle" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-3 py-1 text-sm transition">☀️</button>
     </header>
@@ -81,6 +81,22 @@
     // ------- Utility helpers -------
     const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+    // State abbreviation to full name mapping
+    const stateMap = {
+      'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+      'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
+      'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
+      'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+      'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi', 'MO': 'Missouri',
+      'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire', 'NJ': 'New Jersey',
+      'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio',
+      'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+      'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont',
+      'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming',
+      'DC': 'District of Columbia', 'PR': 'Puerto Rico', 'VI': 'Virgin Islands', 'GU': 'Guam',
+      'AS': 'American Samoa', 'MP': 'Northern Mariana Islands'
+    };
+
     function getZipParam() {
       const params = new URLSearchParams(window.location.search);
       return params.get('zip');
@@ -91,11 +107,29 @@
       if (!res.ok) throw new Error('CSV fetch failed');
       const text = await res.text();
       const rows = text.trim().split('\n');
-      const header = rows.shift().split(',');
+      const header = rows.shift().split(',').map(h => h.trim());
       return rows.map(line => {
-        const cols = line.split(',');
-        const o = {}; header.forEach((h, i) => o[h.trim()] = (cols[i] || '').trim());
-        return o;
+        // Simple CSV parsing (handles quoted fields with commas)
+        const cols = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            cols.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        cols.push(current.trim());
+
+        const obj = {};
+        header.forEach((h, i) => obj[h] = (cols[i] || '').replace(/^"|"$/g, '').trim());
+        return obj;
       });
     }
 
@@ -171,12 +205,13 @@
         return;
       }
 
-      // Handle DEFAULT case (nationwide products)
+      // Handle DEFAULT case (nationwide delivery)
       if (zip === 'DEFAULT') {
         resultDiv.innerHTML = `
           <div class="space-y-1">
-            <h2 class="text-2xl font-semibold text-indigo-400">You are viewing default products</h2>
-            <p class="text-lg">Nationwide availability</p>
+            <h2 class="text-2xl font-semibold text-indigo-400">Nationwide Delivery</h2>
+            <p class="text-lg">Available across all US locations</p>
+            <p class="text-sm text-gray-400 mt-2">No geo-specific targeting • Default fallback</p>
           </div>`;
         metaDiv.textContent = 'ZIP: DEFAULT • Nationwide coverage';
 
@@ -200,37 +235,61 @@
       try {
         data = await fetchCSV('data.csv');
       } catch (e) {
-        resultDiv.textContent = 'Could not load data.csv';
+        resultDiv.textContent = 'Could not load ZIP code data';
         metaDiv.textContent = e.message || String(e);
+        fallbackText.textContent = 'Data unavailable';
         return;
       }
 
-      const match = data.find(r => r.zipcode === zip);
+      // Find ZIP in comprehensive database
+      const match = data.find(r => r.zip === zip);
       if (!match) {
-        resultDiv.innerHTML = `No results found for ZIP <span class="font-mono">${zip}</span>.`;
-        metaDiv.textContent = '';
+        resultDiv.innerHTML = `No data found for ZIP <span class="font-mono">${zip}</span>.`;
+        metaDiv.textContent = 'ZIP code not in database';
         fallbackText.textContent = 'No match';
         return;
       }
 
-      const { county, city, state, state_abbr, state_fips } = match;
-      resultDiv.innerHTML = `
-        <div class="space-y-1">
-          <h2 class="text-2xl font-semibold text-indigo-400">Products found for ${county} County,</h2>
-          <p class="text-lg">in ${city} ${state_abbr}!</p>
-        </div>`;
-      metaDiv.textContent = `ZIP: ${zip} • State: ${state} (FIPS ${state_fips})`;
+      const city = match.primary_city || 'Unknown';
+      const state = match.state || '';
+      const county = match.county || '';
+      const zipType = match.type || 'STANDARD';
+      const timezone = match.timezone ? match.timezone.replace('America/', '') : '';
+      const acceptableCities = match.acceptable_cities || '';
+      const population = match.irs_estimated_population || '0';
 
+      // Build display content
+      let typeLabel = zipType;
+      if (zipType === 'UNIQUE') typeLabel = 'Unique (Organization-specific)';
+      else if (zipType === 'PO BOX') typeLabel = 'PO Box Only';
+      else if (zipType === 'MILITARY') typeLabel = 'Military';
+
+      resultDiv.innerHTML = `
+        <div class="space-y-2">
+          <h2 class="text-2xl font-semibold text-indigo-400">${city}, ${state}</h2>
+          <div class="space-y-1 text-sm">
+            <p><strong>County:</strong> ${county}</p>
+            <p><strong>Type:</strong> ${typeLabel}</p>
+            ${timezone ? `<p><strong>Timezone:</strong> ${timezone}</p>` : ''}
+            ${acceptableCities ? `<p><strong>Also known as:</strong> ${acceptableCities}</p>` : ''}
+            ${population !== '0' ? `<p><strong>Population:</strong> ${parseInt(population).toLocaleString()}</p>` : ''}
+          </div>
+        </div>`;
+      metaDiv.textContent = `ZIP: ${zip} • ${city}, ${state}`;
+
+      // Try to load city image
       try {
-        const url = await resolveImage(city, state, state_abbr);
+        const stateFull = stateMap[state] || state;
+        const url = await resolveImage(city, stateFull, state);
         const img = new Image();
         img.src = url;
-        img.alt = `${city}, ${state_abbr}`;
+        img.alt = `${city}, ${state}`;
         img.className = 'w-full h-48 object-cover fade-in';
         imageWrap.innerHTML = '';
         imageWrap.appendChild(img);
       } catch {
-        imageWrap.innerHTML = `<div class='w-full h-48 bg-gradient-to-br from-indigo-700 to-indigo-500 flex items-center justify-center text-white/90'>Image unavailable</div>`;
+        // Fallback gradient with city name
+        imageWrap.innerHTML = `<div class='w-full h-48 bg-gradient-to-br from-indigo-700 to-indigo-500 flex items-center justify-center text-white/90 text-xl font-semibold'>${city}, ${state}</div>`;
       }
     }
 
