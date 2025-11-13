@@ -102,6 +102,66 @@
       return params.get('zip');
     }
 
+    function getStateParam() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('state');
+    }
+
+    // State information database
+    const stateInfo = {
+      'TX': { name: 'Texas', capital: 'Austin', nickname: 'Lone Star State', population: '30,503,301', area: '268,596 sq mi', zipPrefix: '7' },
+      'CA': { name: 'California', capital: 'Sacramento', nickname: 'Golden State', population: '39,128,162', area: '163,696 sq mi', zipPrefix: '9' },
+      'NY': { name: 'New York', capital: 'Albany', nickname: 'Empire State', population: '19,677,151', area: '54,555 sq mi', zipPrefix: '1' },
+      'FL': { name: 'Florida', capital: 'Tallahassee', nickname: 'Sunshine State', population: '22,610,726', area: '65,758 sq mi', zipPrefix: '3' },
+      'IL': { name: 'Illinois', capital: 'Springfield', nickname: 'Prairie State', population: '12,582,032', area: '57,914 sq mi', zipPrefix: '6' },
+      'PA': { name: 'Pennsylvania', capital: 'Harrisburg', nickname: 'Keystone State', population: '12,972,008', area: '46,054 sq mi', zipPrefix: '1' },
+      'OH': { name: 'Ohio', capital: 'Columbus', nickname: 'Buckeye State', population: '11,785,935', area: '44,826 sq mi', zipPrefix: '4' },
+      'GA': { name: 'Georgia', capital: 'Atlanta', nickname: 'Peach State', population: '11,029,227', area: '59,425 sq mi', zipPrefix: '3' },
+      'NC': { name: 'North Carolina', capital: 'Raleigh', nickname: 'Tar Heel State', population: '10,835,491', area: '53,819 sq mi', zipPrefix: '2' },
+      'MI': { name: 'Michigan', capital: 'Lansing', nickname: 'Great Lakes State', population: '10,034,113', area: '96,714 sq mi', zipPrefix: '4' },
+      'NJ': { name: 'New Jersey', capital: 'Trenton', nickname: 'Garden State', population: '9,290,841', area: '8,723 sq mi', zipPrefix: '0' },
+      'VA': { name: 'Virginia', capital: 'Richmond', nickname: 'Old Dominion', population: '8,683,619', area: '42,775 sq mi', zipPrefix: '2' },
+      'WA': { name: 'Washington', capital: 'Olympia', nickname: 'Evergreen State', population: '7,812,880', area: '71,298 sq mi', zipPrefix: '9' },
+      'AZ': { name: 'Arizona', capital: 'Phoenix', nickname: 'Grand Canyon State', population: '7,431,344', area: '113,990 sq mi', zipPrefix: '8' },
+      'MA': { name: 'Massachusetts', capital: 'Boston', nickname: 'Bay State', population: '7,001,399', area: '10,554 sq mi', zipPrefix: '0' },
+      'TN': { name: 'Tennessee', capital: 'Nashville', nickname: 'Volunteer State', population: '7,126,489', area: '42,144 sq mi', zipPrefix: '3' },
+      'IN': { name: 'Indiana', capital: 'Indianapolis', nickname: 'Hoosier State', population: '6,862,199', area: '36,420 sq mi', zipPrefix: '4' },
+      'MO': { name: 'Missouri', capital: 'Jefferson City', nickname: 'Show Me State', population: '6,177,957', area: '69,707 sq mi', zipPrefix: '6' },
+      'MD': { name: 'Maryland', capital: 'Annapolis', nickname: 'Old Line State', population: '6,177,224', area: '12,406 sq mi', zipPrefix: '2' },
+      'WI': { name: 'Wisconsin', capital: 'Madison', nickname: 'Badger State', population: '5,906,742', area: '65,496 sq mi', zipPrefix: '5' },
+      'CO': { name: 'Colorado', capital: 'Denver', nickname: 'Centennial State', population: '5,877,610', area: '104,094 sq mi', zipPrefix: '8' },
+      'MN': { name: 'Minnesota', capital: 'Saint Paul', nickname: 'North Star State', population: '5,737,915', area: '86,936 sq mi', zipPrefix: '5' },
+      'SC': { name: 'South Carolina', capital: 'Columbia', nickname: 'Palmetto State', population: '5,373,555', area: '32,020 sq mi', zipPrefix: '2' },
+      'AL': { name: 'Alabama', capital: 'Montgomery', nickname: 'Yellowhammer State', population: '5,108,468', area: '52,420 sq mi', zipPrefix: '3' },
+      'LA': { name: 'Louisiana', capital: 'Baton Rouge', nickname: 'Pelican State', population: '4,573,749', area: '52,378 sq mi', zipPrefix: '7' },
+      'KY': { name: 'Kentucky', capital: 'Frankfort', nickname: 'Bluegrass State', population: '4,526,154', area: '40,408 sq mi', zipPrefix: '4' },
+      'OR': { name: 'Oregon', capital: 'Salem', nickname: 'Beaver State', population: '4,240,137', area: '98,379 sq mi', zipPrefix: '9' },
+      'OK': { name: 'Oklahoma', capital: 'Oklahoma City', nickname: 'Sooner State', population: '4,053,824', area: '69,899 sq mi', zipPrefix: '7' },
+      'CT': { name: 'Connecticut', capital: 'Hartford', nickname: 'Constitution State', population: '3,626,205', area: '5,543 sq mi', zipPrefix: '0' },
+      'UT': { name: 'Utah', capital: 'Salt Lake City', nickname: 'Beehive State', population: '3,417,734', area: '84,897 sq mi', zipPrefix: '8' },
+      'IA': { name: 'Iowa', capital: 'Des Moines', nickname: 'Hawkeye State', population: '3,207,004', area: '56,273 sq mi', zipPrefix: '5' },
+      'NV': { name: 'Nevada', capital: 'Carson City', nickname: 'Silver State', population: '3,194,176', area: '110,572 sq mi', zipPrefix: '8' },
+      'AR': { name: 'Arkansas', capital: 'Little Rock', nickname: 'Natural State', population: '3,067,732', area: '53,179 sq mi', zipPrefix: '7' },
+      'MS': { name: 'Mississippi', capital: 'Jackson', nickname: 'Magnolia State', population: '2,939,690', area: '48,432 sq mi', zipPrefix: '3' },
+      'KS': { name: 'Kansas', capital: 'Topeka', nickname: 'Sunflower State', population: '2,937,880', area: '82,278 sq mi', zipPrefix: '6' },
+      'NM': { name: 'New Mexico', capital: 'Santa Fe', nickname: 'Land of Enchantment', population: '2,115,877', area: '121,590 sq mi', zipPrefix: '8' },
+      'NE': { name: 'Nebraska', capital: 'Lincoln', nickname: 'Cornhusker State', population: '1,978,379', area: '77,348 sq mi', zipPrefix: '6' },
+      'ID': { name: 'Idaho', capital: 'Boise', nickname: 'Gem State', population: '1,964,726', area: '83,569 sq mi', zipPrefix: '8' },
+      'WV': { name: 'West Virginia', capital: 'Charleston', nickname: 'Mountain State', population: '1,770,071', area: '24,230 sq mi', zipPrefix: '2' },
+      'HI': { name: 'Hawaii', capital: 'Honolulu', nickname: 'Aloha State', population: '1,455,271', area: '10,932 sq mi', zipPrefix: '9' },
+      'NH': { name: 'New Hampshire', capital: 'Concord', nickname: 'Granite State', population: '1,395,231', area: '9,349 sq mi', zipPrefix: '0' },
+      'ME': { name: 'Maine', capital: 'Augusta', nickname: 'Pine Tree State', population: '1,385,340', area: '35,380 sq mi', zipPrefix: '0' },
+      'RI': { name: 'Rhode Island', capital: 'Providence', nickname: 'Ocean State', population: '1,098,163', area: '1,545 sq mi', zipPrefix: '0' },
+      'MT': { name: 'Montana', capital: 'Helena', nickname: 'Treasure State', population: '1,122,867', area: '147,040 sq mi', zipPrefix: '5' },
+      'DE': { name: 'Delaware', capital: 'Dover', nickname: 'First State', population: '1,018,396', area: '2,489 sq mi', zipPrefix: '1' },
+      'SD': { name: 'South Dakota', capital: 'Pierre', nickname: 'Mount Rushmore State', population: '909,824', area: '77,116 sq mi', zipPrefix: '5' },
+      'ND': { name: 'North Dakota', capital: 'Bismarck', nickname: 'Peace Garden State', population: '779,094', area: '70,698 sq mi', zipPrefix: '5' },
+      'AK': { name: 'Alaska', capital: 'Juneau', nickname: 'Last Frontier', population: '733,391', area: '665,384 sq mi', zipPrefix: '9' },
+      'VT': { name: 'Vermont', capital: 'Montpelier', nickname: 'Green Mountain State', population: '647,064', area: '9,616 sq mi', zipPrefix: '0' },
+      'WY': { name: 'Wyoming', capital: 'Cheyenne', nickname: 'Equality State', population: '581,381', area: '97,813 sq mi', zipPrefix: '8' },
+      'DC': { name: 'District of Columbia', capital: 'Washington', nickname: 'Nation\'s Capital', population: '678,972', area: '68 sq mi', zipPrefix: '2' }
+    };
+
     async function fetchCSV(path) {
       const res = await fetch(path + '?v=' + Date.now());
       if (!res.ok) throw new Error('CSV fetch failed');
@@ -197,11 +257,55 @@
       const imageWrap = document.getElementById('image-wrap');
       const fallbackText = document.getElementById('image-fallback');
 
+      // Check for state parameter first
+      const state = getStateParam();
+      if (state) {
+        const stateAbbr = state.toUpperCase();
+        const info = stateInfo[stateAbbr];
+
+        if (!info) {
+          resultDiv.innerHTML = `No data found for state <span class="font-mono">${stateAbbr}</span>.`;
+          metaDiv.textContent = 'State not in database';
+          fallbackText.textContent = 'No match';
+          return;
+        }
+
+        // Display state information
+        resultDiv.innerHTML = `
+          <div class="space-y-2">
+            <h2 class="text-3xl font-bold text-indigo-400">${info.name}</h2>
+            <p class="text-xl text-gray-300">${info.nickname}</p>
+            <div class="space-y-1 text-sm mt-4">
+              <p><strong>Capital:</strong> ${info.capital}</p>
+              <p><strong>Population:</strong> ${info.population}</p>
+              <p><strong>Area:</strong> ${info.area}</p>
+              <p><strong>ZIP Prefix:</strong> ${info.zipPrefix}xxxx</p>
+            </div>
+          </div>`;
+        metaDiv.textContent = `State: ${stateAbbr} • ${info.name}`;
+
+        // Load state flag/image from Wikipedia
+        const stateFlagUrl = `https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Flag_of_${info.name.replace(' ', '_')}.svg/320px-Flag_of_${info.name.replace(' ', '_')}.svg.png`;
+        try {
+          const url = await loadImage(stateFlagUrl);
+          const img = new Image();
+          img.src = url;
+          img.alt = `${info.name} Flag`;
+          img.className = 'w-full h-48 object-contain bg-white fade-in';
+          imageWrap.innerHTML = '';
+          imageWrap.appendChild(img);
+        } catch {
+          // Fallback gradient with state abbreviation
+          imageWrap.innerHTML = `<div class='w-full h-48 bg-gradient-to-br from-indigo-700 to-indigo-500 flex items-center justify-center text-white/90 text-6xl font-bold'>${stateAbbr}</div>`;
+        }
+        return;
+      }
+
       const zip = getZipParam();
       if (!zip) {
-        resultDiv.innerHTML = `Please provide a ZIP code in the URL.<br><span class="font-mono text-indigo-400">?zip=90210</span>`;
+        resultDiv.innerHTML = `Please provide a ZIP code or state in the URL.<br><span class="font-mono text-indigo-400">?zip=90210</span> or <span class="font-mono text-indigo-400">?state=TX</span>`;
         metaDiv.textContent = '';
-        fallbackText.textContent = 'No ZIP provided';
+        fallbackText.textContent = 'No ZIP or state provided';
         return;
       }
 
@@ -251,7 +355,7 @@
       }
 
       const city = match.primary_city || 'Unknown';
-      const state = match.state || '';
+      const stateAbbr = match.state || '';
       const county = match.county || '';
       const zipType = match.type || 'STANDARD';
       const timezone = match.timezone ? match.timezone.replace('America/', '') : '';
@@ -266,7 +370,7 @@
 
       resultDiv.innerHTML = `
         <div class="space-y-2">
-          <h2 class="text-2xl font-semibold text-indigo-400">${city}, ${state}</h2>
+          <h2 class="text-2xl font-semibold text-indigo-400">${city}, ${stateAbbr}</h2>
           <div class="space-y-1 text-sm">
             <p><strong>County:</strong> ${county}</p>
             <p><strong>Type:</strong> ${typeLabel}</p>
@@ -275,21 +379,21 @@
             ${population !== '0' ? `<p><strong>Population:</strong> ${parseInt(population).toLocaleString()}</p>` : ''}
           </div>
         </div>`;
-      metaDiv.textContent = `ZIP: ${zip} • ${city}, ${state}`;
+      metaDiv.textContent = `ZIP: ${zip} • ${city}, ${stateAbbr}`;
 
       // Try to load city image
       try {
-        const stateFull = stateMap[state] || state;
-        const url = await resolveImage(city, stateFull, state);
+        const stateFull = stateMap[stateAbbr] || stateAbbr;
+        const url = await resolveImage(city, stateFull, stateAbbr);
         const img = new Image();
         img.src = url;
-        img.alt = `${city}, ${state}`;
+        img.alt = `${city}, ${stateAbbr}`;
         img.className = 'w-full h-48 object-cover fade-in';
         imageWrap.innerHTML = '';
         imageWrap.appendChild(img);
       } catch {
         // Fallback gradient with city name
-        imageWrap.innerHTML = `<div class='w-full h-48 bg-gradient-to-br from-indigo-700 to-indigo-500 flex items-center justify-center text-white/90 text-xl font-semibold'>${city}, ${state}</div>`;
+        imageWrap.innerHTML = `<div class='w-full h-48 bg-gradient-to-br from-indigo-700 to-indigo-500 flex items-center justify-center text-white/90 text-xl font-semibold'>${city}, ${stateAbbr}</div>`;
       }
     }
 
